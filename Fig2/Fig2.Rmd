@@ -1,0 +1,421 @@
+---
+title: "Figure 2; Inhibition of HSP90 exposes cryptic variation in traits diverging between populations in an invasive ant"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    collapsed: true
+    number_sections: true
+    df_print: paged
+  pdf_document: default
+---
+<STYLE TYPE="text/css">
+<!--
+  td{
+    font-family: Arial; 
+    font-size: 8pt;
+    padding:0px;
+    cellpadding="0";
+    cellspacing="0"
+  }
+  th {
+    font-family: Arial; 
+    font-size: 8pt;
+    height: 20px;
+    font-weight: bold;
+    text-align: right;
+    background-color: #ccccff;
+  }
+  table { 
+    border-spacing: 0px;
+    border-collapse: collapse;
+  }
+--->
+</STYLE>
+# Setup environment
+
+## install libraries
+```{r}
+# install.packages("devtools")
+library(devtools)
+install_github("thomasp85/patchwork")
+```
+
+## load libraries
+```{r}
+library(ggplot2)
+source("~/sciebo/librarySchrader.R")
+library(cowplot)
+library(rgr)
+library("corrplot")
+library(factoextra)
+library(FactoMineR)
+library(ggExtra)
+library(sjstats)
+library("gridExtra")
+library(patchwork)
+library(cvequality)
+library(coin)
+```
+
+# Process data
+## Load morphometric data
+```{r}
+data<-read.csv("/Users/lukas/sciebo/Projects/BSc/Miles Winter/paper/paper/lukas/Figures/Fig2/morphometry.tsv",sep="\t",stringsAsFactors = F)
+data$group <- factor(data$group, levels = c("C","T","BR","TN"))
+summary(data$group)
+
+```
+
+## Define colors
+```{r}
+data$group<-as.factor(data$group)
+data$col<-NA
+data$col[data$group=="C"]<-goodCols[1]
+data$col[data$group=="T"]<-goodCols[3]
+data$col[data$group=="TN"]<-goodCols[5]
+data$col[data$group=="BR"]<-goodCols[7]
+
+```
+## Define experiments
+```{r}
+data$exp<-as.factor(ifelse(data$group=="BR"|data$group=="TN","nat. pop.","17-DMAG"))
+```
+
+## Calculate simple correlations
+```{r}
+gg1 <- ggplot(data, aes(x = ML, y = SP,colour = group)) + geom_point(alpha=1,cex=2,color=data$col) 
+gg1<-gg1 + geom_density_2d(alpha=.2,cex=.3) +  scale_color_manual(values = c(goodCols[c(1,3,5,7)]))+theme_light() +   geom_smooth(method='lm',alpha=.2)
+
+gg8 <- ggplot(data, aes(x = EY, y = HL,colour = group)) + geom_point(alpha=1,cex=2,color=data$col) 
+gg8 <-gg8 + geom_density_2d(alpha=.2,cex=.3) +  scale_color_manual(values = c(goodCols[c(1,3,5,7)]))+theme_light() +   geom_smooth(method='lm',alpha=.2,cex=.8)
+
+gg10 <- ggplot(data, aes(x = HL, y = CL,colour = group)) + geom_point(alpha=1,cex=2,color=data$col) 
+gg10 <- gg10 + geom_density_2d(alpha=.2,cex=.3) +  scale_color_manual(values = c(goodCols[c(1,3,5,7)]))+theme_light() +   geom_smooth(method='lm',alpha=.2,cex=.8)
+
+```
+## Plot simple correlations
+```{r warning=FALSE}
+gg1
+gg8
+gg10
+```
+
+
+## Create boxplots for all 4 groups
+```{r}
+alphaVal<-0.5
+dotS<-0.5
+axtexsize<-10
+p1 <- ggplot(data, aes(x=group, y=ML)) + 
+  geom_boxplot(outlier.shape = NA) + facet_grid(. ~ exp,scales = "free",switch="x") + theme(strip.background = element_rect(fill=rgb(0,0,0,0)),strip.text.x=element_text(size=7,vjust=.9))
+p1<-p1 + geom_dotplot(binaxis='y', stackdir='center', dotsize=dotS, aes(x=group, y=ML,fill=group,color=group)) +
+  theme(legend.position="none") +
+  scale_fill_manual(values=addalpha(c(rep("black",4)),alphaVal))+
+  scale_color_manual(values=rep(NA,4)) +
+  theme(axis.title.x=element_blank(),axis.text=element_text(size=axtexsize),axis.title.y = element_text(margin = margin(t = 0, r = -15, b = 0, l = 0)))  + 
+  scale_y_continuous(breaks = c(390, 500))
+
+p2 <- ggplot(data, aes(x=group, y=SP)) + 
+  geom_boxplot(outlier.shape = NA) + facet_grid(. ~ exp,scales = "free",switch="x") + theme(strip.background = element_rect(fill=rgb(0,0,0,0)),strip.text.x=element_text(size=7,vjust=.9))
+p2<-p2 + geom_dotplot(binaxis='y', stackdir='center', dotsize=dotS, aes(x=group, y=SP,fill=group,color=group)) + 
+  theme(legend.position="none") + 
+  scale_fill_manual(values=addalpha(c(rep("black",4)),alphaVal)) +
+  scale_color_manual(values=rep(NA,4)) +
+  theme(axis.title.x=element_blank(),axis.text=element_text(size=axtexsize),axis.title.y = element_text(margin = margin(t = 0, r = -15, b = 0, l = 0)))  + 
+  scale_y_continuous(breaks = c(100, 165))+ expand_limits(y=170)
+
+p3 <- ggplot(data, aes(x=group, y=EY)) + 
+  geom_boxplot(outlier.shape = NA) + facet_grid(. ~ exp,scales = "free",switch="x") + theme(strip.background = element_rect(fill=rgb(0,0,0,0)),strip.text.x=element_text(size=7,vjust=.9))
+
+p3 <- p3 + geom_dotplot(binaxis='y', stackdir='center', dotsize=dotS, aes(x=group, y=EY,fill=group,color=group)) + 
+  theme(legend.position="none") +
+  scale_fill_manual(values=addalpha(c(rep("black",4)),alphaVal))+ 
+  scale_color_manual(values=rep(NA,4)) +
+  theme(axis.title.x=element_blank(),axis.text=element_text(size=axtexsize),axis.title.y = element_text(margin = margin(t = 0, r = -15, b = 0, l = 0)))  + 
+  scale_y_continuous(breaks = c(370, 420)) + expand_limits(y=430)
+  
+
+p4 <- ggplot(data, aes(x=group, y=HL)) + 
+  geom_boxplot(outlier.shape = NA) + facet_grid(. ~ exp,scales = "free",switch="x") + theme(strip.background = element_rect(fill=rgb(0,0,0,0)),strip.text.x=element_text(size=7,vjust=.9))
+p4<-p4 + geom_dotplot(binaxis='y', stackdir='center', dotsize=dotS, aes(x=group, y=HL,fill=group,color=group)) + 
+  theme(legend.position="none") + 
+  scale_fill_manual(values=addalpha(c(rep("black",4)),alphaVal))+ 
+  scale_color_manual(values=rep(NA,4)) +
+  theme(axis.title.x=element_blank(),axis.text=element_text(size=axtexsize),axis.title.y = element_text(margin = margin(t = 0, r = -15, b = 0, l = 0)))  + 
+  scale_y_continuous(breaks = c(375, 475)) + expand_limits(y=480)
+
+p5 <- ggplot(data, aes(x=group, y=CL)) + 
+  geom_boxplot(outlier.shape = NA) + facet_grid(. ~ exp,scales = "free",switch="x") + theme(strip.background = element_rect(fill=rgb(0,0,0,0)),strip.text.x=element_text(size=7,vjust=.9))
+p5l<-p5 + geom_dotplot(binaxis='y', stackdir='center', dotsize=dotS, aes(x=group, y=CL,fill=group,color=group)) + 
+  guides(fill=guide_legend(ncol=1)) + 
+  scale_fill_manual(values=addalpha(c(rep("black",4)),alphaVal))+
+  scale_color_manual(values=rep(NA,4)) + 
+  theme(axis.title.x=element_blank(),axis.text=element_text(size=axtexsize),axis.title.y = element_text(margin = margin(t = 0, r = -15, b = 0, l = 0)))  + 
+  scale_y_continuous(breaks = c(95, 120))
+
+p5 <- p5l+ theme(legend.position="none")
+legend <- get_legend(p5l)
+```
+
+## Calculate F-test for Treatment vs Control
+```{r}
+# f-test
+dat2<-split(data,f=data$group)
+tests<-list()
+tests[["ML"]]<-var.test(dat2[["T"]]$ML,dat2[["C"]]$ML)
+tests[["SP"]]<-var.test(dat2[["T"]]$SP,dat2[["C"]]$SP)
+tests[["EY"]]<-var.test(dat2[["T"]]$EY,dat2[["C"]]$EY)
+tests[["HL"]]<-var.test(dat2[["T"]]$HL,dat2[["C"]]$HL)
+tests[["CL"]]<-var.test(dat2[["T"]]$CL,dat2[["C"]]$CL)
+```
+
+## Calculate mslr Tests for Treatment vs Control
+```{r}
+#Marwick and Krishnamoorthy 2016 
+mslrTests<-list()
+
+tmp<-subset(data,!is.na(ML) & (group=="T"|group=="C"))
+tmp$group<-as.factor(as.character(tmp$group))
+mslrTests[["ML"]]<-mslr_test(nr=10000,tmp$ML,tmp$group)
+
+tmp<-subset(data,!is.na(SP)& (group == "T"|group == "C"))
+tmp$group<-as.factor(as.character(tmp$group))
+mslrTests[["SP"]]<-mslr_test(nr=10000,tmp$SP,tmp$group)
+
+tmp<-subset(data,!is.na(CL)& (group == "T"|group == "C"))
+tmp$group<-as.factor(as.character(tmp$group))
+mslrTests[["CL"]]<-mslr_test(nr=10000,tmp$CL,tmp$group)
+
+tmp<-subset(data,!is.na(EY)& (group == "T"|group == "C"))
+tmp$group<-as.factor(as.character(tmp$group))
+mslrTests[["EY"]]<-mslr_test(nr=10000,tmp$EY,tmp$group)
+
+tmp<-subset(data,!is.na(HL)& (group == "T"|group == "C"))
+tmp$group<-as.factor(as.character(tmp$group))
+mslrTests[["HL"]]<-mslr_test(nr=10000,tmp$HL,tmp$group)
+
+```
+
+## Generate Table object with all relevant information
+```{r}
+means<-list()
+sds<-list()
+medians<-list()
+mins<-list()
+maxs<-list()
+cvs<-list()
+vars<-list()
+
+for (p in c("T","C")){
+  for (q in c('ML','SP','EY','HL','CL')){
+    means[[p]][q]<-mean(dat2[[p]][,q],na.rm=T)
+    sds[[p]][q]<-sd(dat2[[p]][,q],na.rm=T)
+    medians[[p]][q]<-median(dat2[[p]][,q],na.rm=T)
+    mins[[p]][q]<-min(dat2[[p]][,q],na.rm=T)
+    maxs[[p]][q]<-max(dat2[[p]][,q],na.rm=T)
+    cvs[[p]][q]<-cv(dat2[[p]][,q])
+    vars[[p]][q]<-var(dat2[[p]][,q],na.rm=T)
+  }
+}
+m1<-do.call(cbind,means)
+colnames(m1)<-c("T_mean","C_mean")
+m2<-do.call(cbind,sds)
+colnames(m2)<-c("T_sd","C_sd")
+m3<-do.call(cbind,medians)
+colnames(m3)<-c("T_median","C_median")
+m4<-do.call(cbind,mins)
+colnames(m4)<-c("T_min","C_min")
+m5<-do.call(cbind,maxs)
+colnames(m5)<-c("T_max","C_max")
+m6<-do.call(cbind,cvs)
+colnames(m6)<-c("T_cv","C_cv")
+m7<-do.call(cbind,vars)
+colnames(m7)<-c("T_var","C_var")
+all<-cbind(m1,m2,m3,m4,m5,m6,m7)
+
+fstats<-vector()
+pvalue<-vector()
+mslrStats<-vector()
+mslrP<-vector()
+for (q in c('ML','SP','EY','HL','CL')){
+  fstats[q]<-(tests[[q]]$statistic)
+  pvalue[q]<-(tests[[q]]$p.value)
+  mslrStats[q]<-mslrTests[[q]]$MSLRT
+  mslrP[q]<-mslrTests[[q]]$p_value
+}
+fstats<-data.frame(fstats)
+pvalue<-data.frame(pvalue)
+mslrStats<-data.frame(mslrStats)
+mslrP<-data.frame(mslrP)
+all<-merge(all,mslrStats,by="row.names")
+row.names(all)<-all$Row.names
+all2<-merge(all[,-1],mslrP,by="row.names")
+colnames(all2)[1]<-"measurement"
+write.table(all2,"/Users/lukas/sciebo/Projects/BSc/Miles Winter/paper/paper/lukas/Figures/Fig2/morphometryTable.experiment.tsv",sep="\t",quote=F,row.names = F)
+
+all2
+```
+
+
+
+## Calculate deviation from the mean
+```{r}
+data$ML_d<-NA
+data$CL_d<-NA
+data$EY_d<-NA
+data$SP_d<-NA
+data$HL_d<-NA
+
+data$ML_d[data$group=="C"]<-abs(data$ML[data$group=="C"]-mean(data$ML[data$group=="C"],na.rm=TRUE))
+data$CL_d[data$group=="C"]<-abs(data$CL[data$group=="C"]-mean(data$CL[data$group=="C"],na.rm=T))
+data$EY_d[data$group=="C"]<-abs(data$EY[data$group=="C"]-mean(data$EY[data$group=="C"],na.rm=T))
+data$SP_d[data$group=="C"]<-abs(data$SP[data$group=="C"]-mean(data$SP[data$group=="C"],na.rm=T))
+data$HL_d[data$group=="C"]<-abs(data$HL[data$group=="C"]-mean(data$HL[data$group=="C"],na.rm=T))
+
+data$ML_d[data$group=="T"]<-abs(data$ML[data$group=="T"]-mean(data$ML[data$group=="T"],na.rm=T))
+data$CL_d[data$group=="T"]<-abs(data$CL[data$group=="T"]-mean(data$CL[data$group=="T"],na.rm=T))
+data$EY_d[data$group=="T"]<-abs(data$EY[data$group=="T"]-mean(data$EY[data$group=="T"],na.rm=T))
+data$SP_d[data$group=="T"]<-abs(data$SP[data$group=="T"]-mean(data$SP[data$group=="T"],na.rm=T))
+data$HL_d[data$group=="T"]<-abs(data$HL[data$group=="T"]-mean(data$HL[data$group=="T"],na.rm=T))
+
+data$ML_d[data$group=="BR"]<-abs(data$ML[data$group=="BR"]-mean(data$ML[data$group=="BR"],na.rm=T))
+data$CL_d[data$group=="BR"]<-abs(data$CL[data$group=="BR"]-mean(data$CL[data$group=="BR"],na.rm=T))
+data$EY_d[data$group=="BR"]<-abs(data$EY[data$group=="BR"]-mean(data$EY[data$group=="BR"],na.rm=T))
+data$SP_d[data$group=="BR"]<-abs(data$SP[data$group=="BR"]-mean(data$SP[data$group=="BR"],na.rm=T))
+data$HL_d[data$group=="BR"]<-abs(data$HL[data$group=="BR"]-mean(data$HL[data$group=="BR"],na.rm=T))
+
+data$ML_d[data$group=="TN"]<-abs(data$ML[data$group=="TN"]-mean(data$ML[data$group=="TN"],na.rm=T))
+data$CL_d[data$group=="TN"]<-abs(data$CL[data$group=="TN"]-mean(data$CL[data$group=="TN"],na.rm=T))
+data$EY_d[data$group=="TN"]<-abs(data$EY[data$group=="TN"]-mean(data$EY[data$group=="TN"],na.rm=T))
+data$SP_d[data$group=="TN"]<-abs(data$SP[data$group=="TN"]-mean(data$SP[data$group=="TN"],na.rm=T))
+data$HL_d[data$group=="TN"]<-abs(data$HL[data$group=="TN"]-mean(data$HL[data$group=="TN"],na.rm=T))
+
+colnames(data)[colnames(data)=="HL_d"]<-"dHL"
+colnames(data)[colnames(data)=="CL_d"]<-"dCL"
+colnames(data)[colnames(data)=="SP_d"]<-"dSP"
+colnames(data)[colnames(data)=="ML_d"]<-"dML"
+colnames(data)[colnames(data)=="EY_d"]<-"dEY"
+```
+
+# Focus on population comparison
+## Create subset for only population specific data
+```{r}
+dataPop<-subset(data,group=="TN"|group=="BR")
+dataPop$group<-as.factor(as.character(dataPop$group))
+dataPop$colony<-as.factor(dataPop$colony)
+```
+
+## Run wilcox tests comparing both populations
+```{r}
+willies<-list()
+willies[["ML"]]<-wilcox_test(dataPop$ML~dataPop$group,distribution=approximate(nresample=9999))
+willies[["SP"]]<-wilcox_test(dataPop$SP~dataPop$group,distribution=approximate(nresample=9999))
+willies[["EY"]]<-wilcox_test(dataPop$EY~dataPop$group,distribution=approximate(nresample=9999))
+willies[["HL"]]<-wilcox_test(dataPop$HL~dataPop$group,distribution=approximate(nresample=9999))
+willies[["CL"]]<-wilcox_test(dataPop$CL~dataPop$group,distribution=approximate(nresample=9999))
+```
+
+## Create table object for pops with relevant info
+```{r}
+
+datP2<-split(dataPop,f=dataPop$group)
+means<-list()
+sds<-list()
+medians<-list()
+mins<-list()
+maxs<-list()
+cvs<-list()
+vars<-list()
+
+
+for (p in c("BR","TN")){
+  for (q in c('ML','SP','EY','HL','CL')){
+    means[[p]][q]<-mean(datP2[[p]][,q],na.rm=T)
+    sds[[p]][q]<-sd(datP2[[p]][,q],na.rm=T)
+    medians[[p]][q]<-median(datP2[[p]][,q],na.rm=T)
+    mins[[p]][q]<-min(datP2[[p]][,q],na.rm=T)
+    maxs[[p]][q]<-max(datP2[[p]][,q],na.rm=T)
+    cvs[[p]][q]<-cv(datP2[[p]][,q])
+    vars[[p]][q]<-var(datP2[[p]][,q],na.rm=T)
+    
+  }
+}
+m1<-do.call(cbind,means)
+colnames(m1)<-c("BR_mean","TN_mean")
+m2<-do.call(cbind,sds)
+colnames(m2)<-c("BR_sd","TN_sd")
+m3<-do.call(cbind,medians)
+colnames(m3)<-c("BR_median","TN_median")
+m4<-do.call(cbind,mins)
+colnames(m4)<-c("BR_min","TN_min")
+m5<-do.call(cbind,maxs)
+colnames(m5)<-c("BR_max","TN_max")
+m6<-do.call(cbind,cvs)
+colnames(m6)<-c("BR_cv","TN_cv")
+m7<-do.call(cbind,vars)
+colnames(m7)<-c("BR_var","TN_var")
+all<-cbind(m1,m2,m3,m4,m5,m6,m7)
+
+
+pvalue<-vector()
+mslrStats<-vector()
+mslrP<-vector()
+wilcoxP<-vector()
+wilcoxStats<-vector()
+for (q in c('ML','SP','EY','HL','CL')){
+  wilcoxP[q]<-pvalue(willies[[q]])[1]
+  wilcoxStats[q]<-statistic(willies[[q]])
+}
+
+wilcoxStats<-data.frame(wilcoxStats)
+wilocxP<-data.frame(wilcoxP)
+
+all<-merge(all,wilcoxP,by="row.names")
+row.names(all)<-all$Row.names
+allPop<-merge(all[,-1],wilcoxStats,by="row.names")
+
+colnames(allPop)[1]<-"measurement"
+colnames(allPop)[colnames(allPop)=="y"]<-"wilcox_p"
+write.table(allPop,"/Users/lukas/sciebo/Projects/BSc/Miles Winter/paper/paper/lukas/Figures/Fig2/morphometryTable.populations.tsv",sep="\t",quote=F,row.names = F)
+
+allPop
+
+```
+
+```{r}
+## Add significance symbols 
+ann_text2  <- data.frame(group = 1.5,SP = Inf,exp = factor("nat. pop.",levels = c("17-DMAG","nat. pop.")))
+
+
+p2<-p2+  
+  geom_text(data = ann_text2,label = "+",vjust=1,size=2.5) + 
+  geom_text(data = ann_text2,label = "____",vjust=.7,size=4,fontface = "bold")
+
+ann_text  <- data.frame(group = 1.5,EY = Inf,exp = factor("17-DMAG",levels = c("17-DMAG","nat. pop.")))
+ann_text2 <- data.frame(group = 1.5,EY = Inf,exp = factor("nat. pop.",levels = c("17-DMAG","nat. pop.")))
+
+p3<-p3+  
+  geom_text(data = ann_text,label = "ø",vjust=1,size=2.5) + 
+  geom_text(data = ann_text,label = "____",vjust=.7,size=4,fontface = "bold") +
+  geom_text(data = ann_text2,label = "+",vjust=1,size=2.5) + 
+  geom_text(data = ann_text2,label = "____",vjust=.7,size=4,fontface = "bold")
+  
+ann_text  <- data.frame(group = 1.5,HL = Inf,exp = factor("17-DMAG",levels = c("17-DMAG","nat. pop.")))
+ann_text2 <- data.frame(group = 1.5,HL = Inf,exp = factor("nat. pop.",levels = c("17-DMAG","nat. pop.")))
+
+p4<-p4+  
+  geom_text(data = ann_text,label = "ø",vjust=1,size=2.5) + 
+  geom_text(data = ann_text,label = "____",vjust=.7,size=4,fontface = "bold") +
+  geom_text(data = ann_text2,label = "+",vjust=1,size=2.5) + 
+  geom_text(data = ann_text2,label = "____",vjust=.7,size=4,fontface = "bold")
+
+
+```
+
+## Plot boxplots for all 4 groups
+```{r warning=FALSE}
+plot_grid(p1,p2,p3,p4,p5,ncol=3)
+dev.print(pdf,"/Users/lukas/sciebo/Projects/BSc/Miles Winter/paper/paper/lukas/Figures/Fig2/Fig2.pdf",width=5,height=4)
+```

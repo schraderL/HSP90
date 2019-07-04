@@ -1,0 +1,89 @@
+---
+title: "Figure 1; Inhibition of HSP90 exposes cryptic variation in traits diverging between populations in an invasive ant"
+output:
+  pdf_document: default
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    collapsed: true
+    number_sections: true
+    df_print: paged
+---
+<STYLE TYPE="text/css">
+<!--
+  td{
+    font-family: Arial; 
+    font-size: 8pt;
+    padding:0px;
+    cellpadding="0";
+    cellspacing="0"
+  }
+  th {
+    font-family: Arial; 
+    font-size: 8pt;
+    height: 20px;
+    font-weight: bold;
+    text-align: right;
+    background-color: #ccccff;
+  }
+  table { 
+    border-spacing: 0px;
+    border-collapse: collapse;
+  }
+--->
+</STYLE>
+# Setup environment
+```{r}
+library(ggplot2)
+library(ggsignif)
+library(cowplot)
+library(coin)
+source("~/sciebo/librarySchrader.R")
+alphaVal<-0.5
+dotS<-0.5
+wt<-list()
+```
+
+```{r}
+gd<-read.table("/Users/lukas/sciebo/Projects/BSc/Miles Winter/paper/paper/lukas/Figures/Fig1/qPCRdata.tsv",sep="\t")
+```
+
+
+
+```{r}
+
+data<-subset(gd,TY=="larvae")  
+wt<-wilcox_test(data$pfafflRatio~as.factor(data$treatment),alternative="less",distribution=approximate(nresample=9999))
+p1 <- ggplot(data, aes(x=treatment, y=pfafflRatio)) + 
+  geom_boxplot(outlier.shape = NA) 
+p1<-p1 + geom_point(data=data,aes(x=treatment,y=pfafflRatio,fill=treatment),color="black",pch=21,,size=2,lwd=.5)  + scale_fill_manual(values=addalpha(c("white","white"),alphaVal))+ scale_color_manual(values=rep(NA,4)) + ylab("relative HSP70 expression") +
+theme(legend.position="none",legend.title = element_blank(), axis.title.x=element_blank(),axis.text=element_text(size=10),axis.title.y=element_text(size=12)) + theme(plot.margin = unit(c(0, 0, 0, 0), "cm"))
+p1<-p1+ggtitle("Larvae",subtitle = ifelse(pvalue(wt)[1]<0.05,"*","ns")) + theme(plot.title = element_text(colour = "gray60",hjust = 0.5))  + theme(plot.subtitle = element_text(colour = "black",hjust = 0.5,size=15))  + scale_x_discrete(labels=c(expression(C["n=5"]),expression(T["n=5"])))
+
+wt
+
+data<-subset(gd,TY=="worker")  
+wt<-wilcox_test(data$pfafflRatio~as.factor(data$treatment),alternative="less",distribution=approximate(nresample=9999))
+p2 <- ggplot(data, aes(x=treatment, y=pfafflRatio)) + 
+  geom_boxplot(outlier.shape = NA) 
+p2<-p2 + geom_point(data=data,aes(x=treatment,y=pfafflRatio,fill=treatment),color="black",pch=21,,size=2,lwd=.5)  + scale_fill_manual(values=addalpha(c("white","white"),alphaVal))+ scale_color_manual(values=rep(NA,4)) +
+theme(legend.position="none",legend.title = element_blank(), axis.title.x=element_blank(),axis.text=element_text(size=10),axis.title.y=element_blank()) + theme(plot.margin = unit(c(0, 0, 0, 0.4), "cm"))
+p2<-p2+ggtitle("Workers",subtitle = ifelse(pvalue(wt)[1]<0.05,"*","ns")) + theme(plot.title = element_text(colour = "gray60",hjust = 0.5)) + theme(plot.subtitle = element_text(colour = "black",hjust = 0.5,size=15)) + scale_x_discrete(labels=c(expression(C["n=6"]),expression(T["n=6"])))
+
+wt
+
+data<-subset(gd,TY=="queen")  
+wt<-wilcox_test(data$pfafflRatio~as.factor(data$treatment),alternative="less",distribution=approximate(nresample=9999))
+p3 <- ggplot(data, aes(x=treatment, y=pfafflRatio)) + 
+  geom_boxplot(outlier.shape = NA) 
+p3<-p3 + geom_point(data=data,aes(x=treatment,y=pfafflRatio,fill=treatment),color="black",pch=21,,size=2,lwd=.5)  + scale_fill_manual(values=addalpha(c("white","white"),alphaVal))+ scale_color_manual(values=rep(NA,4)) +
+  theme(legend.position="none",legend.title = element_blank(), axis.title.x=element_blank(),axis.text=element_text(size=10),axis.title.y=element_blank()) + theme(plot.margin = unit(c(0, 0, 0, 0.7), "cm"))
+p3<-p3+ggtitle("Queens",subtitle = ifelse(pvalue(wt)[1]<0.05,"*","ns")) + theme(plot.title = element_text(colour = "gray60",hjust = 0.5)) + theme(plot.subtitle = element_text(colour = "black",hjust = 0.5,size=10)) + scale_x_discrete(labels=c(expression(C["n=5"]),expression(T["n=5"])))
+
+wt
+
+plot_grid(p1,p2,p3,ncol=3)
+dev.print(pdf,"/Users/lukas/sciebo/Projects/BSc/Miles Winter/paper/paper/lukas/Figures/Fig1/Fig1.pdf",width=4,height=3)
+```
+
