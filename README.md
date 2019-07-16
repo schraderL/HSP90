@@ -1,2 +1,2 @@
 # HSP90
-R scripts to reproduce Figures 1 and 2 in Cardiogenesis paper
+R scripts to compute statistical tests and generate Figures 1 and 2 for the Cardiogenesis manuscript
